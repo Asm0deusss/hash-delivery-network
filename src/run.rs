@@ -1,23 +1,29 @@
 #![forbid(unsafe_code)]
-
+//! Module with function [`run`](crate::run::run), which will launch the server
 use std::{
     collections::HashMap,
+    io::Write,
     net::{IpAddr, SocketAddr, TcpListener},
     sync::{Arc, Mutex},
     thread,
 };
 
+use serde_json::json;
+
+use crate::ErrorType;
+
 use super::{
-    json_manager::{get_request, send_response, Request, Response},
-    log_printer::{print_log, LogStatement},
+    tools::log_printer::{print_log, LogStatement},
+    tools::request_manager::{get_request, send_response, Request, Response},
 };
 
-pub fn run(ip: IpAddr, port: u16) {
+/// Function that wll lauch server with given ```ip``` and ```port```
+pub fn run(ip: IpAddr, port: u16) -> Result<(), ErrorType> {
     let map: HashMap<String, String> = HashMap::new();
-    let map_ref = Arc::new(Mutex::new(map));
+    let map = Arc::new(Mutex::new(map));
 
     let address = SocketAddr::new(ip, port);
-    let listener = TcpListener::bind(address).unwrap();
+    let listener = TcpListener::bind(address)?;
 
     for stream in listener.incoming() {
         if stream.is_err() {
@@ -25,21 +31,19 @@ pub fn run(ip: IpAddr, port: u16) {
         }
 
         let mut stream = stream.unwrap();
-        let hash_to_key = Arc::clone(&map_ref);
+        let map = Arc::clone(&map);
 
-        print_log(
-            ip,
-            LogStatement::NewConnection,
-            hash_to_key.lock().unwrap().len(),
-        );
+        let greeting = json!({"student_name" : "Gordei Skorobogatov"});
+        stream.write_all(greeting.to_string().as_bytes())?;
 
-        let _ = thread::spawn(move || loop {
+        print_log(ip, LogStatement::NewConnection, map.lock().unwrap().len());
+
+        let current_thread = thread::spawn(move || loop {
             let request = get_request(&mut stream);
 
             let request = match request {
                 Ok(req) => req,
                 Err(_) => {
-                    send_response(&mut stream, Response::Err);
                     break;
                 }
             };
@@ -47,12 +51,12 @@ pub fn run(ip: IpAddr, port: u16) {
             print_log(
                 ip,
                 LogStatement::Request(&request),
-                hash_to_key.lock().unwrap().len(),
+                map.lock().unwrap().len(),
             );
 
             let response = match request {
                 Request::Store { key, hash } => {
-                    let mut guard = hash_to_key.lock().unwrap();
+                    let mut guard = map.lock().unwrap();
                     guard.insert(key.clone(), hash.clone());
                     Response::SuccessLoad {
                         key: (key),
@@ -60,7 +64,7 @@ pub fn run(ip: IpAddr, port: u16) {
                     }
                 }
                 Request::Load { key } => {
-                    let guard = hash_to_key.lock().unwrap();
+                    let guard = map.lock().unwrap();
                     match guard.get(&key) {
                         Some(hash) => Response::SuccessLoad {
                             key: (key),
@@ -71,7 +75,14 @@ pub fn run(ip: IpAddr, port: u16) {
                 }
             };
 
-            send_response(&mut stream, response);
+            let send = send_response(&mut stream, response);
+
+            if send.is_err() {
+                break;
+            }
         });
+        current_thread.join().unwrap();
     }
+
+    Ok(())
 }

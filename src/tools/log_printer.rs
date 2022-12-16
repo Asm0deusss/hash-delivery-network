@@ -3,13 +3,15 @@
 use chrono::prelude::*;
 use std::net::IpAddr;
 
-use super::json_manager::Request;
+use super::request_manager::Request;
 
+/// Enum for easier log output
 pub enum LogStatement<'a> {
     Request(&'a Request),
     NewConnection,
 }
 
+/// Function that prints given '''LogStatement''' message with additional information.
 pub fn print_log(ip: IpAddr, state: LogStatement, cur_storage_size: usize) {
     print!("{} [{}] ", ip, Utc::now().format("%d/%b%Y:%T %z"),);
 

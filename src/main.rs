@@ -1,22 +1,28 @@
 #![forbid(unsafe_code)]
 
 use clap::Parser;
-use hash_delivery_service::tools::run::run;
+use hash_delivery_service::run::run;
 
-use std::net::{IpAddr, Ipv4Addr};
+use std::net::IpAddr;
 
+/// Structure for running server from terminal
 #[derive(Debug, Parser)]
 struct Opts {
-    #[clap(short, long)]
+    #[clap(short, long, default_value = "127.0.0.1")]
     ip: IpAddr,
 
-    #[clap(short, long, default_value = "0")]
+    #[clap(short, long, default_value = "8888")]
     port: u16,
 }
 
 fn main() {
-    let ip4 = Ipv4Addr::new(127, 0, 0, 1);
-    let ip = IpAddr::V4((ip4));
+    let opts = Opts::parse();
+    let run = run(opts.ip, opts.port);
 
-    run(ip, 8888);
+    if run.is_err() {
+        println!(
+            "Can't start the server with ip {} and port {}",
+            opts.ip, opts.port
+        );
+    }
 }
