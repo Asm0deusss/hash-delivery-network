@@ -5,17 +5,26 @@ use std::net::IpAddr;
 
 use super::request_manager::Request;
 
-/// Enum for easier log output
-pub enum LogStatement<'a> {
-    Request(&'a Request),
+/// Enum for handling log statement for printer
+#[derive(PartialEq)]
+pub enum LogStatement {
+    Request(Request),
     NewConnection,
+    Shutdown,
 }
 
-/// Function that prints given '''LogStatement''' message with additional information.
-pub fn print_log(ip: IpAddr, state: LogStatement, cur_storage_size: usize) {
-    print!("{} [{}] ", ip, Utc::now().format("%d/%b%Y:%T %z"),);
+/// Struct for easier log print
+pub struct Logger {
+    pub ip: IpAddr,
+    pub state: LogStatement,
+    pub cur_storage_size: usize,
+}
 
-    match state {
+/// Function that prints given '''Logger''' statement message with additional information.
+pub fn print_log(logger: Logger) {
+    print!("{} [{}] ", logger.ip, Utc::now().format("%d/%b%Y:%T %z"),);
+
+    match logger.state {
         LogStatement::Request(request) => match request {
             Request::Store { key, hash } => {
                 print!(
@@ -30,7 +39,8 @@ pub fn print_log(ip: IpAddr, state: LogStatement, cur_storage_size: usize) {
         LogStatement::NewConnection => {
             print!("Connection established. ");
         }
+        LogStatement::Shutdown => unimplemented!(),
     }
 
-    println!("Storage size: {}.", cur_storage_size);
+    println!("Storage size: {}.", logger.cur_storage_size);
 }

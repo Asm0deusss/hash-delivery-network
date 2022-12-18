@@ -3,7 +3,7 @@ use crate::ErrorType;
 use serde::{Deserialize, Serialize};
 
 /// Enum for getting requests from client.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 #[serde(tag = "request_type")]
 pub enum Request {
@@ -13,6 +13,18 @@ pub enum Request {
     /// Load request.
     /// Gets ```key``` to load from server's storage.
     Load { key: String },
+}
+
+impl Clone for Request {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Store { key, hash } => Self::Store {
+                key: key.clone(),
+                hash: hash.clone(),
+            },
+            Self::Load { key } => Self::Load { key: key.clone() },
+        }
+    }
 }
 
 /// Enum for sending responses back to client.
