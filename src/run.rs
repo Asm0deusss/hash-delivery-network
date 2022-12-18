@@ -44,6 +44,8 @@ pub fn run(ip: IpAddr, port: u16) -> Result<(), ErrorType> {
             let request = match request {
                 Ok(req) => req,
                 Err(_) => {
+                    let response: Response = Response::Err;
+                    let _ = send_response(&mut stream, response);
                     break;
                 }
             };
@@ -58,10 +60,7 @@ pub fn run(ip: IpAddr, port: u16) -> Result<(), ErrorType> {
                 Request::Store { key, hash } => {
                     let mut guard = map.lock().unwrap();
                     guard.insert(key.clone(), hash.clone());
-                    Response::SuccessLoad {
-                        key: (key),
-                        hash: (hash),
-                    }
+                    Response::SuccessStore {}
                 }
                 Request::Load { key } => {
                     let guard = map.lock().unwrap();

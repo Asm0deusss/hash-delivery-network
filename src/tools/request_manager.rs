@@ -37,6 +37,7 @@ pub enum Response {
     NoKey,
 
     /// Server will send it after any problem.
+    #[serde(rename = "error")]
     Err,
 }
 
