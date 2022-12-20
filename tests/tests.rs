@@ -157,6 +157,20 @@ fn test_single_login() {
 }
 
 #[test]
+fn test_multiple_login() {
+    let server = ServerWrapper::start(IpVersion::V4);
+    let mut client = Client::connect(server.addr).unwrap();
+    client.read_expect(make_greeting()).unwrap();
+
+    let mut client2 = Client::connect(server.addr).unwrap();
+    client2.read_expect(make_greeting()).unwrap();
+
+    client.shutdown(Shutdown::Both);
+    client2.shutdown(Shutdown::Both);
+    drop(server);
+}
+
+#[test]
 fn test_store_request() {
     let server = ServerWrapper::start(IpVersion::V4);
     let mut client = Client::connect(server.addr).unwrap();

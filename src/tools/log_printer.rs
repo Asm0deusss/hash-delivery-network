@@ -3,14 +3,16 @@
 use chrono::prelude::*;
 use std::net::IpAddr;
 
+use crate::ErrorType;
+
 use super::request_manager::Request;
 
 /// Enum for handling log statement for printer
-#[derive(PartialEq)]
 pub enum LogStatement {
     Request(Request),
     NewConnection,
     Shutdown,
+    Error(ErrorType),
 }
 
 /// Struct for easier log print
@@ -24,8 +26,8 @@ pub struct Logger {
 pub fn print_log(logger: Logger) {
     print!("{} [{}] ", logger.ip, Utc::now().format("%d/%b%Y:%T %z"),);
 
-    match logger.state {
-        LogStatement::Request(request) => match request {
+    match Some(logger.state) {
+        Some(LogStatement::Request(request)) => match request {
             Request::Store { key, hash } => {
                 print!(
                     "Received request to write new value {} by key {}. ",
@@ -36,10 +38,25 @@ pub fn print_log(logger: Logger) {
                 print!("Received request to get value by key {}. ", key);
             }
         },
-        LogStatement::NewConnection => {
+        Some(LogStatement::NewConnection) => {
             print!("Connection established. ");
         }
-        LogStatement::Shutdown => unimplemented!(),
+        Some(LogStatement::Shutdown) => unimplemented!(),
+        Some(LogStatement::Error(err)) => match err {
+            ErrorType::BadReading => {
+                println!("Can't read request from client ");
+            }
+            ErrorType::IoError(_) => {
+                println!("Can't read(write) request(response) to client ");
+            }
+            ErrorType::JsonErr(_) => {
+                println!("Client sent bad json request ");
+            }
+            ErrorType::BadConnection => {
+                println!("Can't run server with given ip and port ");
+            }
+        },
+        None => unimplemented!(),
     }
 
     println!("Storage size: {}.", logger.cur_storage_size);
